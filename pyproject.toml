@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "airflow-dremio-provider"
+description = "A provider package for managing reflections and executing queries via Dremio."
+authors = [
+    {name="Sanchit Sreekanth", email="sanchitsreekanth@gmail.com"}
+]
+readme = "README.md"
+license = "Apache-2.0"
+classifiers = [
+    "Framework :: Apache Airflow",
+    "Framework :: Apache Airflow :: Provider",
+]
+dependencies = [
+    "requests==2.31.0",
+    "apache-airflow>=2.6.0",
+    "apache-airflow-providers-http==4.10.0"
+]
+dynamic = ["version"]
+requires-python = ">= 3.7"
+keywords = ["airflow", "provider", "dremio", "apache-airflow"]
+
+[project.entry-points."apache_airflow_provider"]
+provider_info = "dremio_provider.__init__:get_provider_info"
+
+[project.urls]
+Homepage = "https://www.dremio.com/"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dremio_provider"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/dremio_provider",
+]
+
+[tool.hatch.version]
+path = "src/dremio_provider/__init__.py"
+pattern = '.*?"versions":.*?\["(?P<version>.*?)"]'
