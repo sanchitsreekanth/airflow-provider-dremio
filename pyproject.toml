@@ -40,3 +40,15 @@ include = [
 [tool.hatch.version]
 path = "src/dremio_provider/__init__.py"
 pattern = '.*?"versions":.*?\["(?P<version>.*?)"]'
+
+[tool.hatch.envs.default]
+python = "3.8"
+platforms = ["linux", "macos"]
+description = "Default environment with Python 3.8 for maximum compatibility"
+
+[tool.hatch.envs.test]
+python = "3.8"
+platforms = ["linux", "macos"]
+dependencies = [
+    "pytest==8.1.1"
+]
