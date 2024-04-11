@@ -56,7 +56,7 @@ class TokenAuth(AuthBase):
         package_name, provider_version = _get_provider_info()
         request.headers["User-Agent"] = f"{package_name}-v{provider_version}"
         request.headers["Content-Type"] = "application/json"
-        request.headers["Authorization"] = f"Token {self.token}"
+        request.headers["Authorization"] = self.token
         return request
 
 
@@ -177,7 +177,7 @@ class DremioHook(HttpHook):
         auth = extra.get("auth", None)
         pat = extra.get("pat", "")
         if not auth:
-            self.log.info("No authentication provided for Dremio")
+            self.log.warning("No authentication provided for Dremio")
             return ""
 
         if auth and auth not in ("AuthToken", "PAT"):
@@ -222,7 +222,7 @@ class DremioHook(HttpHook):
         return base_url
 
     def __fetch_auth_token(self, username: str, password: str):
-        token_url = urljoin(self.base_url, "apiv2/login")
+        token_url = urljoin(self.dremio_url, "apiv2/login")
         data = json.dumps({"userName": username, "password": password})
         headers = {"Content-Type": "application/json"}
         response = requests.post(url=token_url, data=data, headers=headers)
@@ -232,7 +232,7 @@ class DremioHook(HttpHook):
     def get_conn(self, headers: dict[Any, Any] | None = None) -> requests.Session:
         session = requests.Session()
         if self.dremio_conn_id:
-            conn = self.get_connection(self.http_conn_id)
+            conn = self.get_connection(self.dremio_conn_id)
             self.base_url = self.dremio_url
 
             session.auth = TokenAuth(token=self.token)
@@ -260,10 +260,13 @@ class DremioHook(HttpHook):
         data: dict | str | None = None,
         headers: dict | str | None = None,
     ):
-        data = _jsonify(data)
+        data = json.dumps(_jsonify(data))
         headers = {**_jsonify(headers)}
         method = method.upper()
         self.method = method
+        if endpoint.startswith("/"):
+            endpoint = endpoint[1:]
+        endpoint = f"{self.api_version}/{endpoint}"
         response = self.run(endpoint=endpoint, data=data, headers=headers)
         return response.json()
 

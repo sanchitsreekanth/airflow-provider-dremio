@@ -102,8 +102,7 @@ class DremioCreateReflectionOperator(BaseOperator):
 
         if not self.wait_for_completion:
             self.log.warning(
-                "Argument `wait_for_termination` is False. Going to complete task",
-                UserWarning,
+                "Argument `wait_for_termination` is False. Going to complete task"
             )
             return reflection_id
 
@@ -151,7 +150,7 @@ class DremioCreateReflectionOperator(BaseOperator):
 
         else:
             self.log.info(
-                "Going to create reflection %s for ",
+                "Going to create reflection %s for %s",
                 self.reflection_spec.get("name"),
                 self.source,
             )
