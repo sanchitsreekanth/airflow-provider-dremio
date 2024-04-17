@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import time
+from copy import deepcopy
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, Sequence
 
@@ -97,6 +98,7 @@ class DremioCreateReflectionOperator(BaseOperator):
 
     def execute(self, context: Context) -> Any:
         self.preprocess()
+        self.apply_refresh_settings()
         reflection_id = self.create_or_update_reflection()
         context["task_instance"].xcom_push(key="reflection_id", value=reflection_id)
 
@@ -110,6 +112,19 @@ class DremioCreateReflectionOperator(BaseOperator):
             self.execute_async(reflection_id, context)
         else:
             self.execute_sync(reflection_id)
+
+    def apply_refresh_settings(self):
+        dataset_id = self.dataset_spec.get("id")
+        update_body = {
+            "entityType": "dataset",
+            "id": dataset_id,
+            "type": self.dataset_spec.get("type"),
+            "path": self.dataset_spec.get("path"),
+            "accelerationRefreshPolicy": self.refresh_settings,
+        }
+        self.hook.run_and_get_response(
+            method="PUT", endpoint=f"catalog/{dataset_id}", data=update_body
+        )
 
     def __get_path(self, source_name: str):
         return source_name.replace(".", "/")
@@ -145,7 +160,6 @@ class DremioCreateReflectionOperator(BaseOperator):
                     "No updated for reflection. Going to trigger refresh manually"
                 )
                 response = current_spec
-                # TODO: Add reflection refresh setting update if api allows it
                 self.hook.trigger_reflection_refresh(self.dataset_spec.get("id"))
 
         else:
@@ -158,8 +172,10 @@ class DremioCreateReflectionOperator(BaseOperator):
 
         return response.get("id")
 
-    def reflection_updates(self, initial_spec: dict) -> dict:
+    def reflection_updates(self, reflection_spec: dict) -> dict:
         # Remove keys not needed for comparison
+        initial_spec = deepcopy(reflection_spec)
+
         keys_to_remove = [
             "id",
             "status",
@@ -217,6 +233,17 @@ class DremioCreateReflectionOperator(BaseOperator):
             raise DremioException(
                 f"Virtual dataset {self.source} requires 'sql' parameter to be defined"
             )
+
+        if not self.refresh_settings:
+            self.refresh_settings = {
+                "activePolicyType": "NEVER",
+                "refreshPeriodMs": 3600000,
+                "refreshSchedule": "0 0 8 * * ?",
+                "gracePeriodMs": 0,
+                "method": "AUTO",
+                "neverExpire": True,
+                "neverRefresh": True,
+            }
 
         # Assign queue for reflections if provided
         if self.reflection_queue:
@@ -277,3 +304,31 @@ class DremioCreateReflectionOperator(BaseOperator):
         if status == "error":
             raise DremioException(f"Reflection refresh for {reflection_id} has failed")
         return str(reflection_id)
+
+
+class DremioCreateSourceOperator(BaseOperator):
+    template_fields: Sequence[str] = ("source_spec",)
+    template_fields_renderers = {"source_spec": "json"}
+
+    def __init__(self, source_spec: dict[str, Any], dremio_conn_id: str, **kwargs):
+        self.source_spec = source_spec
+        self.dremio_conn_id = dremio_conn_id
+        super().__init__(**kwargs)
+
+    @cached_property
+    def hook(self):
+        return DremioHook(dremio_conn_id=self.dremio_conn_id)
+
+    def execute(self, context: Context) -> Any:
+        self.log.info(
+            "Going to create source %s of type %s",
+            self.source_spec.get("name"),
+            self.source_spec.get("type"),
+        )
+        endpoint = "catalog"
+        self.source_spec["entityType"] = "source"
+        response = self.hook.run_and_get_response(
+            method="POST", endpoint=endpoint, data=self.source_spec
+        )
+        context["task_instance"].xcom_push(key="source_response", value=response)
+        return response
