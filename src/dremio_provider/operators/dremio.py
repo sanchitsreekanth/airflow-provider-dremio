@@ -92,6 +92,7 @@ class DremioCreateReflectionOperator(BaseOperator):
             source_fields = [
                 field.get("name") for field in self.dataset_spec.get("fields", [])
             ]
+            self.log.info("Fields inferred are - %s", json.dumps(source_fields))
             spec["displayFields"] = [{"name": name} for name in source_fields]
 
         return {**self.reflection_spec, **spec}
@@ -148,6 +149,7 @@ class DremioCreateReflectionOperator(BaseOperator):
             )
             updates = self.reflection_updates(current_spec)
             if updates:
+                self.log.info("Updated available - %s", json.dumps(updates))
                 update_spec = self.get_updated_reflection_body(current_spec, updates)
                 self.log.info(
                     "Going to update reflection with body %s", json.dumps(update_spec)
@@ -197,7 +199,7 @@ class DremioCreateReflectionOperator(BaseOperator):
                 current_value = current_value or []
                 current_value = sorted(current_value, key=lambda item: item["name"])
                 new_value = sorted(new_value, key=lambda item: item["name"])
-            if new_value != current_value:
+            if new_value != current_value and current_value:
                 diff_dict[key] = new_value
 
         return diff_dict
@@ -264,7 +266,11 @@ class DremioCreateReflectionOperator(BaseOperator):
                 f"Virtual dataset {self.source} requires 'sql' parameter to be defined"
             )
 
-        if not self.reflection_spec.get("displayFields") and not self.auto_inference:
+        if (
+            not self.reflection_spec.get("displayFields")
+            and not self.auto_inference
+            and self.reflection_spec.get("type", "").lower() == "raw"
+        ):
             raise DremioException(
                 "auto_inference is false and no displayFields provided in reflection_spec which is mandatory for creating reflections"
             )
