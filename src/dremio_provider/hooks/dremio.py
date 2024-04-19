@@ -268,7 +268,8 @@ class DremioHook(HttpHook):
             endpoint = endpoint[1:]
         endpoint = f"{self.api_version}/{endpoint}"
         response = self.run(endpoint=endpoint, data=data, headers=headers)
-        return response.json()
+        if response.status_code != 204:
+            return response.json()
 
     def execute_sql_query(self, sql: str, **sql_kwargs):
         body = {**{"sql": sql, **sql_kwargs}}
@@ -326,7 +327,7 @@ class DremioHook(HttpHook):
 
     def trigger_reflection_refresh(self, dataset_id: str):
         return self.run_and_get_response(
-            method="POST", endpoint=f"catalog/{dataset_id}/refresh", data={}
+            method="POST", endpoint=f"catalog/{dataset_id}/refresh"
         )
 
     def set_property(self, property_name: str, value: str, level: str = "system"):
