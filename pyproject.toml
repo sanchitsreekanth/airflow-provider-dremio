@@ -27,7 +27,7 @@ keywords = ["airflow", "provider", "dremio", "apache-airflow"]
 provider_info = "dremio_provider.__init__:get_provider_info"
 
 [project.urls]
-Homepage = "https://www.dremio.com/"
+Homepage = "https://github.com/sanchitsreekanth/airflow-provider-dremio"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dremio_provider"]
