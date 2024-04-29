@@ -22,7 +22,7 @@ class ReflectionRefreshTrigger(BaseTrigger):
 
     def serialize(self) -> tuple[str, dict[str, Any]]:
         return (
-            "airflow.providers.dremio.triggers.dremio.ReflectionRefreshTrigger",
+            "dremio_provider.triggers.dremio.ReflectionRefreshTrigger",
             {
                 "reflection_id": self.reflection_id,
                 "conn_id": self.conn_id,
