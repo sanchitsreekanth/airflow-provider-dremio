@@ -309,6 +309,12 @@ class DremioCreateReflectionOperator(BaseOperator):
             raise DremioException(f"{reflection_id} reflection has been disabled")
         if status == "error":
             raise DremioException(f"Reflection refresh for {reflection_id} has failed")
+        else:
+            self.log.info(
+                "Reflection refresh for %s has succeeded with state %s",
+                reflection_id,
+                status,
+            )
         return str(reflection_id)
 
 
